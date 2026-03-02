@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 function Login() {
   const [username, setUsername] = useState("");
@@ -17,39 +18,54 @@ function Login() {
       );
 
       localStorage.setItem("token", res.data.token);
-      alert("Login successful");
-      navigate("/dashboard");
+      toast.success("Welcome back 🤍");
+
+      setTimeout(() => navigate("/dashboard"), 800);
     } catch (err) {
-      alert("Invalid credentials");
+      toast.error("Invalid credentials");
     }
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h2>Admin Login</h2>
-      <form onSubmit={handleLogin}>
-        <div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F1EB]" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className="bg-[#FAF7F2] p-10 rounded-3xl shadow-xl w-96 transition-all duration-300 hover:shadow-2xl">
+
+        <h2
+          className="text-3xl text-[#3E3A37] text-center mb-8"
+          style={{ fontFamily: "'Playfair Display', serif" }}
+        >
+          Admin Login
+        </h2>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+
           <input
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            required
+            className="w-full p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2] focus:outline-none focus:ring-2 focus:ring-[#B08968]"
           />
-        </div>
 
-        <div style={{ marginTop: "10px" }}>
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2] focus:outline-none focus:ring-2 focus:ring-[#B08968]"
           />
-        </div>
 
-        <button style={{ marginTop: "15px" }} type="submit">
-          Login
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="w-full bg-[#B08968] text-white p-3 rounded-xl font-medium hover:bg-[#9C7455] transition duration-300"
+          >
+            Login
+          </button>
+
+        </form>
+      </div>
     </div>
   );
 }

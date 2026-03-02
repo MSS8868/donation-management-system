@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
-
+import toast from "react-hot-toast";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -11,203 +11,227 @@ function Dashboard() {
   const [amount, setAmount] = useState("");
   const [donationDate, setDonationDate] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-const [editId, setEditId] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const donationsPerPage = 5;
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/");
-    } else {
-      fetchDonations();
-    }
+    if (!token) navigate("/");
+    else fetchDonations();
   }, [navigate]);
 
   const fetchDonations = async () => {
-    try {
-      const res = await API.get("/donations");
-      setDonations(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    const res = await API.get("/donations");
+    setDonations(res.data);
   };
-const handleEdit = (donation) => {
-  setDonorName(donation.donor_name);
-  setAmount(donation.amount);
-  setDonationDate(donation.donation_date);
-  setEditId(donation.id);
-  setIsEditing(true);
-};const handleAddDonation = async (e) => {
-  e.preventDefault();
 
-  try {
+  const handleAddDonation = async (e) => {
+    e.preventDefault();
+
     if (isEditing) {
       await API.put(`/donations/${editId}`, {
         donor_name: donorName,
         amount,
         donation_date: donationDate,
       });
+      toast.success("Donation updated 🤍");
     } else {
       await API.post("/donations", {
         donor_name: donorName,
         amount,
         donation_date: donationDate,
       });
+      toast.success("Donation added 🤍");
     }
 
-    // Reset form
     setDonorName("");
     setAmount("");
     setDonationDate("");
     setIsEditing(false);
-    setEditId(null);
-
     fetchDonations();
-  } catch (err) {
-    alert("Operation failed");
-  }
-};
-  
-const handleDelete = async (id) => {
-  if (!window.confirm("Are you sure you want to delete this donation?")) {
-    return;
-  }
-  
+  };
 
-  try {
+  const handleDelete = async (id) => {
     await API.delete(`/donations/${id}`);
+    toast.success("Donation removed 🧁");
     fetchDonations();
-  } catch (err) {
-    alert("Failed to delete donation");
-  }
-};
+  };
+
+  const processedDonations = useMemo(() => {
+    return donations
+      .filter((d) =>
+        d.donor_name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) =>
+        sortOrder === "asc"
+          ? new Date(a.donation_date) - new Date(b.donation_date)
+          : new Date(b.donation_date) - new Date(a.donation_date)
+      );
+  }, [donations, searchTerm, sortOrder]);
+
+  const indexOfLast = currentPage * donationsPerPage;
+  const indexOfFirst = indexOfLast - donationsPerPage;
+  const currentDonations = processedDonations.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(processedDonations.length / donationsPerPage);
+  const today = new Date().toISOString().split("T")[0];
+
   return (
-  <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#F5F1EB]" style={{ fontFamily: "Inter, sans-serif" }}>
 
-    {/* HEADER */}
-    <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
-      <h1 className="text-2xl font-bold">Donation Management System</h1>
-      <button
-        onClick={() => {
-          localStorage.removeItem("token");
-          navigate("/");
-        }}
-        className="bg-white text-blue-600 px-4 py-2 rounded font-semibold"
-      >
-        Logout
-      </button>
-    </div>
+      {/* HEADER */}
+      <div className="bg-[#B08968] text-white p-6 flex justify-between items-center shadow-md">
+        <h1
+          className="text-3xl tracking-wide"
+          style={{ fontFamily: "'Playfair Display', serif" }}
+        >
+          Donation Dashboard
+        </h1>
 
-    <div className="p-6">
-
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="bg-white shadow rounded p-6">
-          <h2 className="text-gray-500">Total Donations</h2>
-          <p className="text-2xl font-bold text-green-600">
-            ₹ {donations.reduce((sum, d) => sum + Number(d.amount), 0)}
-          </p>
-        </div>
-
-        <div className="bg-white shadow rounded p-6">
-          <h2 className="text-gray-500">Total Records</h2>
-          <p className="text-2xl font-bold text-blue-600">
-            {donations.length}
-          </p>
-        </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            navigate("/");
+          }}
+          className="bg-white text-[#B08968] px-5 py-2 rounded-xl hover:bg-[#EFE7E1] transition"
+        >
+          Logout
+        </button>
       </div>
 
-      {/* FORM */}
-      <div className="bg-white shadow rounded p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {isEditing ? "Update Donation" : "Add Donation"}
-        </h2>
+      <div className="p-10">
 
-        <form onSubmit={handleAddDonation} className="flex gap-4">
-          <input
-            type="text"
-            placeholder="Donor Name"
-            value={donorName}
-            onChange={(e) => setDonorName(e.target.value)}
-            className="border p-2 rounded w-1/4"
-            required
-          />
+        {/* STATS */}
+        <div className="grid grid-cols-2 gap-6 mb-10">
+          <div className="bg-[#FAF7F2] p-6 rounded-2xl shadow-md">
+            <h2 className="text-[#5C534E]">Total Donations</h2>
+            <p className="text-2xl font-semibold text-[#B08968]">
+              ₹ {processedDonations.reduce((s, d) => s + Number(d.amount), 0)}
+            </p>
+          </div>
 
-          <input
-            type="number"
-            placeholder="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="border p-2 rounded w-1/4"
-            required
-          />
+          <div className="bg-[#FAF7F2] p-6 rounded-2xl shadow-md">
+            <h2 className="text-[#5C534E]">Records</h2>
+            <p className="text-2xl font-semibold text-[#B08968]">
+              {processedDonations.length}
+            </p>
+          </div>
+        </div>
 
-          <input
-            type="date"
-            value={donationDate}
-            onChange={(e) => setDonationDate(e.target.value)}
-            className="border p-2 rounded w-1/4"
-            required
-          />
+        {/* FORM */}
+        <div className="bg-[#FAF7F2] p-8 rounded-2xl shadow-md mb-10">
+          <form onSubmit={handleAddDonation} className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Donor"
+              value={donorName}
+              onChange={(e) => setDonorName(e.target.value)}
+              className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
+              required
+            />
+            <input
+  type="date"
+  value={donationDate}
+  max={today}
+  onChange={(e) => setDonationDate(e.target.value)}
+  className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
+  required
+/>
+            <button className="bg-[#B08968] text-white px-6 rounded-xl hover:bg-[#9C7455] transition">
+              {isEditing ? "Update" : "Add"}
+            </button>
+          </form>
+        </div>
 
-          <button
-            type="submit"
-            className={`px-4 py-2 rounded text-white ${
-              isEditing ? "bg-yellow-500" : "bg-green-600"
-            }`}
-          >
-            {isEditing ? "Update" : "Add"}
-          </button>
-        </form>
-      </div>
+        {/* TABLE */}
+        <div className="bg-[#FAF7F2] p-8 rounded-2xl shadow-md">
+          <div className="flex justify-between mb-6">
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
+            />
 
-      {/* TABLE */}
-      <div className="bg-white shadow rounded p-6">
-        <h2 className="text-xl font-semibold mb-4">All Donations</h2>
+            <button
+              onClick={() =>
+                setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+              }
+              className="bg-[#D6CFC7] px-4 rounded-xl hover:bg-[#C8BEB6] transition"
+            >
+              {sortOrder === "asc" ? "Oldest" : "Newest"}
+            </button>
+          </div>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">Donor</th>
-              <th className="p-3 text-left">Amount</th>
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {donations.map((donation) => (
-              <tr key={donation.id} className="border-b">
-                <td className="p-3">{donation.id}</td>
-                <td className="p-3">{donation.donor_name}</td>
-                <td className="p-3 text-green-600 font-semibold">
-                  ₹ {donation.amount}
-                </td>
-                <td className="p-3">{donation.donation_date}</td>
-                <td className="p-3">
-                  <button
-                    onClick={() => handleEdit(donation)}
-                    className="bg-yellow-400 px-3 py-1 rounded mr-2"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(donation.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
-                </td>
+          <table className="w-full text-[#3E3A37]">
+            <thead className="text-[#5C534E] uppercase text-sm tracking-wider">
+              <tr>
+                <th>ID</th>
+                <th>Donor</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
 
+            <tbody>
+              {currentDonations.map((d) => (
+                <tr
+                  key={d.id}
+                  className="border-t border-[#E4DAD2] hover:bg-[#EFE7E1] transition duration-200"
+                >
+                  <td className="py-3">{d.id}</td>
+                  <td>{d.donor_name}</td>
+                  <td className="text-[#B08968] font-medium">
+                    ₹ {d.amount}
+                  </td>
+                  <td>{d.donation_date}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDelete(d.id)}
+                      className="text-rose-400 hover:text-rose-600 transition"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* PAGINATION */}
+          <div className="flex justify-center mt-6 gap-2">
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`px-3 py-1 rounded-xl ${
+                  currentPage === i + 1
+                    ? "bg-[#B08968] text-white"
+                    : "bg-[#E4DAD2]"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default Dashboard;
