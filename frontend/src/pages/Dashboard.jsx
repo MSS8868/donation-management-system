@@ -15,6 +15,7 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [email, setEmail] = useState("");
 
   const donationsPerPage = 5;
 
@@ -40,11 +41,12 @@ function Dashboard() {
       });
       toast.success("Donation updated 🤍");
     } else {
-      await API.post("/donations", {
-        donor_name: donorName,
-        amount,
-        donation_date: donationDate,
-      });
+     await API.post("/donations", {
+  donor_name: donorName,
+  amount,
+  donation_date: donationDate,
+  email,
+});
       toast.success("Donation added 🤍");
     }
 
@@ -53,6 +55,7 @@ function Dashboard() {
     setDonationDate("");
     setIsEditing(false);
     fetchDonations();
+    setEmail("");
   };
 
   const handleDelete = async (id) => {
@@ -140,6 +143,7 @@ function Dashboard() {
               className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
               required
             />
+            
             <input
   type="date"
   value={donationDate}
@@ -147,6 +151,13 @@ function Dashboard() {
   onChange={(e) => setDonationDate(e.target.value)}
   className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
   required
+/>
+<input
+  type="email"
+  placeholder="Email (optional)"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  className="p-3 rounded-xl bg-[#F5F1EB] border border-[#E4DAD2]"
 />
             <button className="bg-[#B08968] text-white px-6 rounded-xl hover:bg-[#9C7455] transition">
               {isEditing ? "Update" : "Add"}
